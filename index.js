@@ -242,6 +242,11 @@ async function main() {
 	console.log(`   Leads per keyword: ${leadsPerKeyword}`);
 	console.log(`   Output format: ${config.OUTPUT_FORMAT.toUpperCase()}`);
 	console.log(`   Browser automation: Playwright`);
+	console.log(`   CAPTCHA handling: ${config.CAPTCHA?.ENABLED ? 'Enabled' : 'Disabled'}`);
+	if (config.CAPTCHA?.ENABLED) {
+		const maxWaitMinutes = Math.floor((config.CAPTCHA?.MAX_WAIT_TIME || 600) / 60);
+		console.log(`   CAPTCHA wait time: ${maxWaitMinutes} minutes`);
+	}
 
 	try {
 		console.log("\n⏳ Starting scraper...");

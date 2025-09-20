@@ -108,7 +108,7 @@ class GoogleScraper {
 	async handleCaptcha() {
 		try {
 			// Wait for page to stabilize first
-			await this.page.waitForTimeout(2000);
+			await this.page.waitForTimeout(3000);
 
 			const currentUrl = this.page.url();
 
@@ -129,7 +129,7 @@ class GoogleScraper {
 				}
 			}
 
-			// Check for CAPTCHA indicators
+			// Enhanced CAPTCHA indicators
 			const captchaKeywords = [
 				"unusual traffic from your computer network",
 				"verify you're human",
@@ -140,55 +140,85 @@ class GoogleScraper {
 				"i'm not a robot",
 				"select all images with",
 				"click on all images",
+				"robot verification",
+				"automated requests",
+				"temporarily blocked",
+				"rate limit",
+				"too many requests",
+				"please try again",
+				"verify you are human",
+				"complete the security check",
+				"checking your browser",
+				"one more step",
+				"verify your identity"
 			];
 
 			// Check if we're on a CAPTCHA page
 			const isCaptchaPage =
 				currentUrl.includes("google.com/sorry") ||
 				currentUrl.includes("recaptcha") ||
-				currentUrl.includes("captcha");
+				currentUrl.includes("captcha") ||
+				currentUrl.includes("challenge") ||
+				currentUrl.includes("verify");
 
-			if (!isCaptchaPage) {
+			let hasCaptcha = false;
+
+			if (isCaptchaPage) {
+				hasCaptcha = true;
+			} else {
 				// Also check page content for CAPTCHA indicators
 				try {
 					const pageContent = await this.page.content();
-					const hasCaptcha = captchaKeywords.some((keyword) =>
+					hasCaptcha = captchaKeywords.some((keyword) =>
 						pageContent.toLowerCase().includes(keyword.toLowerCase())
 					);
-					if (!hasCaptcha) return false;
 				} catch (error) {
 					// If we can't get content, assume no CAPTCHA
-					return false;
+					hasCaptcha = false;
 				}
 			}
 
-			console.log("CAPTCHA detected! Please solve it manually in the browser.");
-			console.log("Waiting for you to complete the CAPTCHA...");
-			console.log(
-				"💡 Make sure to complete the CAPTCHA and wait for the page to load completely"
-			);
+			if (!hasCaptcha) {
+				return false;
+			}
+
+			console.log("\n🚨 CAPTCHA DETECTED! 🚨");
+			console.log("=" .repeat(50));
+			console.log("Please solve the CAPTCHA manually in the browser window.");
+			console.log("The scraper will wait for you to complete it.");
+			console.log("=" .repeat(50));
+			console.log("💡 Instructions:");
+			console.log("   1. Look at the browser window that opened");
+			console.log("   2. Complete the CAPTCHA challenge");
+			console.log("   3. Wait for the page to redirect to search results");
+			console.log("   4. The scraper will automatically continue");
+			console.log("=" .repeat(50));
 
 			// Enable all resources for CAPTCHA solving
 			await this._enableAllResources();
 
 			// Wait for user to solve CAPTCHA manually
-			// Check every 3 seconds if CAPTCHA is still present
+			// Check at configurable intervals if CAPTCHA is still present
 			let attempts = 0;
-			const maxWaitTime = 300; // 5 minutes max wait
+			const maxWaitTime = (config.CAPTCHA?.MAX_WAIT_TIME || 600) * 1000; // Convert to milliseconds
+			const checkInterval = config.CAPTCHA?.CHECK_INTERVAL || 5000; // Check every 5 seconds
+			const progressInterval = config.CAPTCHA?.PROGRESS_UPDATE_INTERVAL || 30000; // Progress updates every 30 seconds
 
 			while (attempts < maxWaitTime) {
-				await this.page.waitForTimeout(3000); // Wait 3 seconds
-				attempts += 3;
+				await this.page.waitForTimeout(checkInterval);
+				attempts += checkInterval;
 
 				try {
 					// Check if we've been redirected to search results
 					const newUrl = this.page.url();
 					if (
 						newUrl.includes("google.com/search") &&
-						!newUrl.includes("sorry")
+						!newUrl.includes("sorry") &&
+						!newUrl.includes("captcha") &&
+						!newUrl.includes("challenge")
 					) {
 						console.log("✅ CAPTCHA solved! Redirected to search results.");
-						await this.page.waitForTimeout(2000); // Wait for page to fully load
+						await this.page.waitForTimeout(3000); // Wait for page to fully load
 						return true;
 					}
 
@@ -198,22 +228,36 @@ class GoogleScraper {
 						currentContent.toLowerCase().includes(keyword.toLowerCase())
 					);
 
-					if (!stillHasCaptcha && !newUrl.includes("sorry")) {
+					if (!stillHasCaptcha && 
+						!newUrl.includes("sorry") && 
+						!newUrl.includes("captcha") &&
+						!newUrl.includes("challenge")) {
 						console.log("✅ CAPTCHA appears to be solved! Continuing...");
-						await this.page.waitForTimeout(2000); // Wait a bit more for page to load
+						await this.page.waitForTimeout(3000); // Wait a bit more for page to load
 						return true;
 					}
 
-					console.log(
-						`⏳ Still waiting for CAPTCHA to be solved... (${attempts}s elapsed)`
-					);
+					// Show progress at configurable intervals
+					if (attempts % progressInterval === 0) {
+						const minutesElapsed = Math.floor(attempts / 60000);
+						const secondsElapsed = Math.floor((attempts % 60000) / 1000);
+						console.log(
+							`⏳ Still waiting for CAPTCHA to be solved... (${minutesElapsed}m ${secondsElapsed}s elapsed)`
+						);
+						console.log("💡 Make sure to complete the CAPTCHA in the browser window");
+					}
 				} catch (error) {
 					// If we can't check content, the page might be navigating
-					console.log(`⏳ Page is loading... (${attempts}s elapsed)`);
+					if (attempts % progressInterval === 0) {
+						console.log(`⏳ Page is loading... (${Math.floor(attempts / 60000)}m elapsed)`);
+					}
 				}
 			}
 
-			console.log("⏰ Timeout waiting for CAPTCHA. Please try again later.");
+			const maxWaitMinutes = Math.floor(maxWaitTime / 60000);
+			console.log(`\n⏰ TIMEOUT: Maximum wait time (${maxWaitMinutes} minutes) reached.`);
+			console.log("Please try running the scraper again later.");
+			console.log("💡 Tip: Try using a different network or VPN if CAPTCHAs persist.");
 			return false;
 		} catch (error) {
 			console.error("Error handling CAPTCHA:", error.message);

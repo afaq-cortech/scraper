@@ -47,6 +47,13 @@ module.exports = {
 		RETRY_DELAY: 2000,
 	},
 
+	CAPTCHA: {
+		MAX_WAIT_TIME: 600, // 10 minutes in seconds
+		CHECK_INTERVAL: 5000, // 5 seconds between checks
+		PROGRESS_UPDATE_INTERVAL: 30000, // 30 seconds between progress updates
+		ENABLED: true,
+	},
+
 	STEALTH: {
 		BLOCK_RESOURCES: ["image", "font", "media", "stylesheet"],
 		BLOCK_DOMAINS: [
