@@ -1,4 +1,5 @@
 const config = require("../config");
+require("dotenv").config();
 
 class WebsiteContentScraper {
 	constructor(context) {

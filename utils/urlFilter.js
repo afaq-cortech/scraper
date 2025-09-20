@@ -1,5 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const config = require("../config");
+require("dotenv").config();
 
 class UrlFilter {
 	constructor() {

@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+require("dotenv").config();
 
 class BusinessDataExtractor {
 	constructor() {

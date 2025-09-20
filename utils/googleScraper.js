@@ -1,6 +1,7 @@
 const { chromium } = require("playwright");
 const config = require("../config");
 const BusinessDataExtractor = require("./businessDataExtractor");
+require("dotenv").config();
 
 class GoogleScraper {
 	constructor() {

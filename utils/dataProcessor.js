@@ -2,6 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const XLSX = require("xlsx");
 const config = require("../config");
+require("dotenv").config();
+
 
 // US states for location extraction
 const US_STATES = [
@@ -375,38 +377,14 @@ class DataProcessor {
     }
   }
 
-  // Process individual lead with improved cleaning
+  // Process individual lead with improved cleaning - only 5 required fields
   _processLead(lead) {
     return {
-      ...lead,
       name: this.cleanName(lead.name || lead.fullName || ""),
+      title: lead.title ? lead.title.trim() : "",
       company: this.cleanCompanyName(lead.company || ""),
       email: this.cleanEmail(lead.email),
       phone: this.cleanPhone(lead.phone),
-      //   location:
-      //     lead.location ||
-      //     this.extractLocation(lead.description || lead.snippet || ""),
-      //   jobTitle: lead.jobTitle ? lead.jobTitle.trim() : "",
-      //   industry: this.extractIndustry(
-      //     lead.title,
-      //     lead.description,
-      //     lead.snippet
-      //   ),
-      //   website: lead.website || lead.url || lead.link || "",
-      //   scrapedAt: new Date().toISOString(),
-      //   additionalEmails: Array.isArray(lead.additionalEmails)
-      //     ? lead.additionalEmails
-      //         .map((email) => this.cleanEmail(email))
-      //         .filter(Boolean)
-      //     : [],
-      //   additionalPhones: Array.isArray(lead.additionalPhones)
-      //     ? lead.additionalPhones
-      //         .map((phone) => this.cleanPhone(phone))
-      //         .filter(Boolean)
-      //     : [],
-      // Add processing metadata
-      //   processedAt: new Date().toISOString(),
-      //   processorVersion: "2.0",
     };
   }
 
@@ -651,30 +629,19 @@ class DataProcessor {
     return uniqueLeads;
   }
 
-  // Validate lead data with enhanced validation
+  // Validate lead data - focus on 5 required fields
   validateLead(lead) {
-    {
-      /*
-		Valid Lead conditions
-		1. Name
-		2. Title/Designation
-		3. Company
-		4. Phone 
-		5. Email
-	*/
-    }
-
     const validation = { isValid: true, errors: [] };
 
-    // check for valid fields required in lead
-    if (!lead.name && !lead.company && !lead.email && !lead.phone) {
-      validation.errors.push("Missing name or company or contact information");
+    // Must have name
+    if (!lead.name) {
+      validation.errors.push("Missing name");
       validation.isValid = false;
     }
 
-    // Must have either a title / designation for lead
-    if (!lead.title || !lead.designation) {
-      validation.errors.push("Missing title/description");
+    // Must have at least email or phone for contact
+    if (!lead.email && !lead.phone) {
+      validation.errors.push("Missing contact information (email or phone)");
       validation.isValid = false;
     }
 
@@ -788,33 +755,14 @@ class DataProcessor {
     }
   }
 
-  // Format data for export with enhanced fields
+  // Format data for export - only 5 required fields
   _formatExportData(leads) {
     return leads.map((lead) => ({
       Name: lead.name || "",
+      Title: lead.title || "",
       Company: lead.company || "",
       Email: lead.email || "",
       Phone: lead.phone || "",
-      // "Additional Emails": Array.isArray(lead.additionalEmails)
-      // 	? lead.additionalEmails.join("; ")
-      // 	: "",
-      // "Additional Phones": Array.isArray(lead.additionalPhones)
-      // 	? lead.additionalPhones.join("; ")
-      // 	: "",
-      // Website: lead.website || "",
-      // Location: lead.location || "",
-      "Job Title": lead.jobTitle || "",
-      Industry: lead.industry || "",
-      // Source: lead.source || "",
-      // "Search Term": lead.searchTerm || "",
-      // Domain: lead.domain || "",
-      // Description: lead.description || lead.snippet || "",
-      // "Scraped At": lead.scrapedAt || "",
-      // "Processed At": lead.processedAt || "",
-      // "Is Valid": lead.isValid || false,
-      // "Validation Errors": Array.isArray(lead.validationErrors)
-      // 	? lead.validationErrors.join("; ")
-      // 	: "",
     }));
   }
 

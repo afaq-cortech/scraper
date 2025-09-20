@@ -1,8 +1,9 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+require("dotenv").config();
 
 class WebsiteRelevanceFilter {
 	constructor() {
-		this.apiKey = process.env.GEMINI_API_KEY;
+		this.apiKey = process.env.GEMINI_API_KEY || "AIzaSyAOrt-ofWquLImwqSf5ZVZr238545nL8Vg";
 		this.genAI = this.apiKey ? new GoogleGenerativeAI(this.apiKey) : null;
 	}
 

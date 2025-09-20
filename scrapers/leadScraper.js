@@ -61,20 +61,21 @@ class LeadScraper {
 
 					console.log(`📊 Found ${searchResults.length} Google search results`);
 					totalUrlsFound += searchResults.length;
+					// console.log("original urls list:", searchResults);
 
-					console.log(`🧠 Filtering websites with LLM...`);
-					const filteredWebsites = await this.urlFilter.filterUrls(
-						searchResults,
-						keyword
-					);
-					console.log(
-						`✅ Filtered to ${filteredWebsites.length} relevant websites`
-					);
+					// console.log(`🧠 Filtering websites with LLM...`);
+					// const filteredWebsites = await this.urlFilter.filterUrls(
+					// 	searchResults,
+					// 	keyword
+					// );
+					// console.log(
+					// 	`✅ Filtered to ${filteredWebsites.length} relevant websites`
+					// );
 
 					console.log(`🌐 Scraping websites with Playwright...`);
 					const scrapedResults =
 						await this.websiteContentScraper.scrapeWebsites(
-							filteredWebsites.map((result) => ({
+							searchResults.map((result) => ({
 								url: result.url,
 								title: result.title,
 								snippet: result.snippet,
@@ -149,20 +150,13 @@ class LeadScraper {
 				continue;
 			}
 
-			// Create lead object
+			// Create lead object with only 5 required fields
 			const lead = {
 				name: leadData.name || "",
+				title: leadData.title || "",
 				company: leadData.company || "",
 				email: leadData.email || "",
 				phone: leadData.phone || "",
-				// website: leadData.website || leadData.sourceUrl,
-				// address: leadData.address || "",
-				// source: "Enhanced LLM + Playwright",
-				searchTerm: keyword,
-				// domain: leadData.sourceUrl ? new URL(leadData.sourceUrl).hostname : "",
-				// scrapedAt: new Date().toISOString(),
-				// confidence: leadData.confidence || 5,
-				isValid: leadData.email || leadData.phone ? true : false,
 			};
 
 			leads.push(lead);
@@ -175,6 +169,9 @@ class LeadScraper {
 	getStats() {
 		return {
 			totalLeads: this.leads.length,
+			leadsWithName: this.leads.filter((l) => l.name).length,
+			leadsWithTitle: this.leads.filter((l) => l.title).length,
+			leadsWithCompany: this.leads.filter((l) => l.company).length,
 			leadsWithEmail: this.leads.filter((l) => l.email).length,
 			leadsWithPhone: this.leads.filter((l) => l.phone).length,
 			uniqueCompanies: new Set(this.leads.map((l) => l.company)).size,

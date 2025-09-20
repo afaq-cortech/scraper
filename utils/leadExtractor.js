@@ -1,5 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const config = require("../config");
+require("dotenv").config();
 
 class LeadExtractor {
 	constructor() {
@@ -133,29 +134,27 @@ URL: "${websiteData.url}"
 CONTENT:
 ${processedContent}
 
-Extract business information in JSON format:
+Extract ONLY the following 5 fields in JSON format:
 {
   "leads": [
     {
-      "name": "Contact person name",
-      "company": "Company name", 
+      "name": "Full name of the individual",
+      "title": "Job title or professional designation",
+      "company": "Current organization or employer",
       "email": "Email address",
-      "phone": "Phone number",
-      "website": "Website URL",
-      "address": "Full address",
-      "confidence": 9
+      "phone": "Contact number (mobile or office)"
     }
   ]
 }
 
 Rules:
-- Extract ALL visible contact information from the content
+- Extract ONLY the 5 required fields: name, title, company, email, phone
 - Include multiple contacts if found (CEO, manager, sales, etc.)
 - Only extract clearly visible contact information
 - Don't infer or guess missing data
-- Include confidence score (1-10) for each lead
 - Format phone numbers consistently
 - If no relevant information found, return empty leads array
+- Do NOT include website, address, or any other fields
 
 Respond in valid JSON format only.`;
 	}
@@ -179,30 +178,28 @@ ${contextSection}
 CURRENT CONTENT:
 ${batchContent}
 
-Extract business information in JSON format:
+Extract ONLY the following 5 fields in JSON format:
 {
   "leads": [
     {
-      "name": "Contact person name",
-      "company": "Company name", 
+      "name": "Full name of the individual",
+      "title": "Job title or professional designation",
+      "company": "Current organization or employer",
       "email": "Email address",
-      "phone": "Phone number",
-      "website": "Website URL",
-      "address": "Full address",
-      "confidence": 9
+      "phone": "Contact number (mobile or office)"
     }
   ],
   "context_summary": "Brief summary of key business information found"
 }
 
 Rules:
-- Extract ALL visible contact information from the content
+- Extract ONLY the 5 required fields: name, title, company, email, phone
 - Include multiple contacts if found (CEO, manager, sales, etc.)
 - Only extract clearly visible contact information
 - Don't infer or guess missing data
-- Include confidence score (1-10) for each lead
 - Format phone numbers consistently
 - If no relevant information found, return empty leads array
+- Do NOT include website, address, or any other fields
 - Provide context summary for next batch
 
 Respond in valid JSON format only.`;
@@ -308,12 +305,10 @@ Respond in valid JSON format only.`;
 			if (cleanEmails.length > 0 || cleanPhones.length > 0) {
 				leads.push({
 					name: "",
+					title: "",
 					company: this.extractCompanyName(content),
 					email: cleanEmails[0] || "",
 					phone: cleanPhones[0] || "",
-					website: data.url,
-					address: "",
-					confidence: 5,
 					sourceUrl: data.url,
 					extractedAt: new Date().toISOString(),
 					keyword: data.keyword || "unknown",

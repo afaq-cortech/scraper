@@ -249,8 +249,10 @@ async function main() {
 
 		console.log(`\n🎉 Scraping completed successfully!`);
 		console.log(`📊 Results:`);
-		console.log(`   Data in leads: ${leads.map((l) => console.log("name:", l.name, "email:", l.email, "phone:", l.phone, "company:"))}`);
 		console.log(`   Total leads found: ${leads.length}`);
+		console.log(`   Leads with name: ${leads.filter((l) => l.name).length}`);
+		console.log(`   Leads with title: ${leads.filter((l) => l.title).length}`);
+		console.log(`   Leads with company: ${leads.filter((l) => l.company).length}`);
 		console.log(`   Leads with email: ${leads.filter((l) => l.email).length}`);
 		console.log(`   Leads with phone: ${leads.filter((l) => l.phone).length}`);
 		console.log(

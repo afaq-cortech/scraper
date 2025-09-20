@@ -1,4 +1,6 @@
 const axios = require("axios");
+require("dotenv").config();
+
 
 class MicroserviceClient {
 	constructor() {
