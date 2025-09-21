@@ -1,6 +1,7 @@
 const { chromium } = require("playwright");
 const config = require("../config");
 const BusinessDataExtractor = require("./businessDataExtractor");
+const HistoryManager = require("./historyManager");
 require("dotenv").config();
 
 class GoogleScraper {
@@ -9,6 +10,7 @@ class GoogleScraper {
 		this.context = null;
 		this.page = null;
 		this.llmExtractor = new BusinessDataExtractor();
+		this.historyManager = new HistoryManager();
 		this.isInitialized = false;
 		this.maxRetries = 3;
 	}
@@ -51,6 +53,12 @@ class GoogleScraper {
 
 			this.isInitialized = true;
 			console.log("Playwright scraper initialized successfully");
+			
+			// Show history statistics if enabled
+			if (config.HISTORY?.ENABLED && config.HISTORY?.SHOW_STATS) {
+				this.historyManager.showStats();
+			}
+			
 			return true;
 		} catch (error) {
 			console.error("Failed to initialize Playwright scraper:", error.message);
@@ -332,8 +340,24 @@ class GoogleScraper {
 
 		console.log(`Searching Google for: "${searchTerm}"`);
 
-		let allResults = [];
-		let page = null;
+		// Get previously scraped URLs if history is enabled
+		let scrapedUrls = [];
+		let smartStartPosition = 0;
+		if (config.HISTORY?.ENABLED) {
+			scrapedUrls = this.historyManager.getScrapedUrls(searchTerm);
+			if (scrapedUrls.length > 0) {
+				// Calculate smart starting position (start from where we left off)
+				smartStartPosition = scrapedUrls.length;
+				console.log(`📚 Found ${scrapedUrls.length} previously scraped URLs for "${searchTerm}"`);
+				console.log(`🚀 Smart start: Beginning search from position ${smartStartPosition + 1} instead of position 1`);
+			}
+		}
+
+	let allResults = [];
+	let newUniqueResults = [];
+	let page = null;
+	const maxPages = 20; // Safety limit to prevent infinite searching
+	const scrapedUrlsSet = new Set(scrapedUrls);
 
 		try {
 			page = await this.context.newPage();
@@ -348,23 +372,25 @@ class GoogleScraper {
 				"Upgrade-Insecure-Requests": "1",
 			});
 
-			let start = 0;
-			const resultsPerPage = 10;
-			let currentPage = 1;
+		let start = smartStartPosition;
+		const resultsPerPage = 10;
+		let currentPage = Math.floor(smartStartPosition / resultsPerPage) + 1;
 
-			console.log(`\n📄 Starting Google search pagination:`);
-			console.log(`   Target: ${maxResults} results`);
-			console.log(`   Results per page: ${resultsPerPage}`);
-			console.log(`   Expected pages: ${Math.ceil(maxResults / resultsPerPage)}\n`);
+		console.log(`\n📄 Starting Google search pagination:`);
+		console.log(`   Target: ${maxResults} NEW unique results`);
+		console.log(`   Results per page: ${resultsPerPage}`);
+		console.log(`   Starting from position: ${smartStartPosition + 1}`);
+		console.log(`   Starting page: ${currentPage}`);
+		console.log(`   Max pages to search: ${maxPages}\n`);
 
-			while (allResults.length < maxResults) {
+		while (newUniqueResults.length < maxResults && currentPage <= maxPages) {
 				const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
 					searchTerm
 				)}&start=${start}&num=${resultsPerPage}`;
 
-				console.log(`\n🔍 Page ${currentPage}:`);
-				console.log(`   Fetching results ${start + 1}-${start + resultsPerPage}`);
-				console.log(`   Progress: ${allResults.length}/${maxResults} results collected`);
+			console.log(`\n🔍 Page ${currentPage}:`);
+			console.log(`   Fetching results ${start + 1}-${start + resultsPerPage}`);
+			console.log(`   Progress: ${newUniqueResults.length}/${maxResults} NEW unique results found`);
 
 				await page.goto(searchUrl, {
 					waitUntil: "domcontentloaded",
@@ -389,16 +415,29 @@ class GoogleScraper {
 					break;
 				}
 
-				allResults.push(...pageResults);
-				console.log(
-					`Extracted ${pageResults.length} results, total: ${allResults.length}`
-				);
+			allResults.push(...pageResults);
+			
+			// Filter for new unique URLs
+			const newResults = pageResults.filter(result => !scrapedUrlsSet.has(result.url));
+			newUniqueResults.push(...newResults);
+			
+			// Add new URLs to the scraped set to avoid duplicates within this session
+			newResults.forEach(result => scrapedUrlsSet.add(result.url));
+			
+			console.log(`   Extracted ${pageResults.length} results from page`);
+			console.log(`   Found ${newResults.length} NEW unique results`);
+			console.log(`   Total NEW unique results: ${newUniqueResults.length}`);
+			
+			// If we're getting very few new results despite smart positioning, warn about potential position drift
+			if (smartStartPosition > 0 && pageResults.length > 0 && newResults.length === 0) {
+				console.log(`   ⚠️ No new results found - search results may have shifted since last scrape`);
+			}
 
-				// Check if we have enough results or if there are more pages
-				if (allResults.length >= maxResults) {
-					console.log(`\n✅ Target number of results (${maxResults}) reached`);
-					break;
-				}
+			// Check if we have enough new unique results
+			if (newUniqueResults.length >= maxResults) {
+				console.log(`\n✅ Target number of NEW unique results (${maxResults}) reached`);
+				break;
+			}
 
 				// Check for next page link using multiple selectors
 				const nextPageSelectors = [
@@ -432,13 +471,29 @@ class GoogleScraper {
 				await this.randomDelay(2000, 5000);
 			}
 
-			// Return only the requested number of results
-			const results = allResults.slice(0, maxResults);
-			console.log(
-				`Google search completed: ${results.length} results for "${searchTerm}"`
-			);
+		// Add new URLs to history if enabled
+		if (config.HISTORY?.ENABLED && newUniqueResults.length > 0) {
+			const newUrls = newUniqueResults.map(result => result.url);
+			this.historyManager.addUrls(searchTerm, newUrls);
+			this.historyManager.saveHistory();
+		}
 
-			return results;
+		// Return only the requested number of NEW unique results
+		const results = newUniqueResults.slice(0, maxResults);
+		
+		console.log(`\n📊 Search Summary:`);
+		console.log(`   Started from position: ${smartStartPosition + 1} (skipped ${smartStartPosition} known URLs)`);
+		console.log(`   Total pages searched: ${currentPage - Math.floor(smartStartPosition / resultsPerPage) - 1}`);
+		console.log(`   Total results found: ${allResults.length}`);
+		console.log(`   Previously scraped: ${scrapedUrls.length}`);
+		console.log(`   NEW unique results: ${newUniqueResults.length}`);
+		console.log(`   Returning: ${results.length} results`);
+		
+		console.log(
+			`\n✅ Google search completed: ${results.length} NEW unique results for "${searchTerm}"`
+		);
+
+		return results;
 		} catch (error) {
 			console.error("Google search error:", error);
 			throw error;
@@ -1083,11 +1138,61 @@ class GoogleScraper {
 
 	async close() {
 		try {
+			// Save history before closing
+			if (config.HISTORY?.ENABLED) {
+				this.historyManager.saveHistory();
+			}
+			
 			await this._cleanup();
 			console.log("Playwright scraper closed successfully");
 		} catch (error) {
 			console.error("Error closing Playwright scraper:", error.message);
 		}
+	}
+
+	// Get history statistics
+	getHistoryStats() {
+		if (config.HISTORY?.ENABLED) {
+			return this.historyManager.getStats();
+		}
+		return null;
+	}
+
+	// Show history statistics
+	showHistoryStats() {
+		if (config.HISTORY?.ENABLED) {
+			this.historyManager.showStats();
+		}
+	}
+
+	// Clear history for a specific keyword
+	clearKeywordHistory(keyword) {
+		if (config.HISTORY?.ENABLED) {
+			this.historyManager.clearKeywordHistory(keyword);
+		}
+	}
+
+	// Clear all history
+	clearAllHistory() {
+		if (config.HISTORY?.ENABLED) {
+			this.historyManager.clearAllHistory();
+		}
+	}
+
+	// List all history files
+	listHistoryFiles() {
+		if (config.HISTORY?.ENABLED) {
+			return this.historyManager.listHistoryFiles();
+		}
+		return [];
+	}
+
+	// Get current date
+	getCurrentDate() {
+		if (config.HISTORY?.ENABLED) {
+			return this.historyManager.getCurrentDate();
+		}
+		return null;
 	}
 
 	// Get scraper status

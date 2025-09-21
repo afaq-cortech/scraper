@@ -61,6 +61,12 @@ class LeadScraper {
 
 					console.log(`📊 Found ${searchResults.length} Google search results`);
 					totalUrlsFound += searchResults.length;
+
+					// Show history information if enabled
+					if (config.HISTORY?.ENABLED && searchResults.length === 0) {
+						console.log(`⚠️ No new URLs found for "${keyword}" - all URLs may have been previously scraped`);
+						console.log(`💡 Consider using a different keyword or clearing history for this keyword`);
+					}
 					// console.log("original urls list:", searchResults);
 
 					// console.log(`🧠 Filtering websites with LLM...`);
@@ -89,19 +95,31 @@ class LeadScraper {
 						keyword
 					);
 
-					console.log(`📝 Processing leads...`);
-					const keywordLeads = this.createLeadsFromData(extractedData, keyword);
+				console.log(`📝 Processing leads...`);
+				const keywordLeads = this.createLeadsFromData(extractedData, keyword);
 
-					// Save leads
-					keywordLeads.forEach((lead) => {
-						this.dataProcessor.appendLeadToBackup(lead);
-						this.leads.push(lead);
-						totalLeads++;
-					});
+				// Save leads
+				keywordLeads.forEach((lead) => {
+					this.dataProcessor.appendLeadToBackup(lead);
+					this.leads.push(lead);
+					totalLeads++;
+				});
 
-					console.log(
-						`✅ Keyword "${keyword}": ${keywordLeads.length} leads found`
+				console.log(
+					`✅ Keyword "${keyword}": ${keywordLeads.length} leads found`
+				);
+
+				// Export leads for this keyword separately
+				if (keywordLeads.length > 0) {
+					const processedKeywordLeads = this.dataProcessor.processLeads(keywordLeads);
+					const safeKeyword = keyword.toLowerCase().replace(/[^a-z0-9]/g, '_');
+					const keywordExportPath = this.dataProcessor.exportData(
+						processedKeywordLeads,
+						`scraped_leads_${safeKeyword}`,
+						config.OUTPUT_FORMAT
 					);
+					console.log(`📊 Keyword export: ${keywordExportPath}`);
+				}
 
 					// Delay between keywords
 					if (i < keywords.length - 1) {
@@ -121,15 +139,15 @@ class LeadScraper {
 			// Export data
 			this.dataProcessor.closeBackup(totalLeads);
 
-			if (this.leads.length > 0) {
-				const processedLeads = this.dataProcessor.processLeads(this.leads);
-				const exportPath = this.dataProcessor.exportData(
-					processedLeads,
-					"scraped_leads",
-					config.OUTPUT_FORMAT
-				);
-				console.log(`📊 Final export: ${exportPath}`);
-			}
+		if (this.leads.length > 0) {
+			const processedLeads = this.dataProcessor.processLeads(this.leads);
+			const exportPath = this.dataProcessor.exportData(
+				processedLeads,
+				"scraped_leads_combined",
+				config.OUTPUT_FORMAT
+			);
+			console.log(`📊 Combined export (all keywords): ${exportPath}`);
+		}
 
 			console.log(`\n🎉 Scraping completed! Total leads: ${totalLeads}`);
 			return this.leads;

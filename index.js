@@ -43,6 +43,10 @@ Usage:
   node index.js [keywords] [leads_per_keyword]
   node index.js file [leads_per_keyword]    # Use keywords from keywords.json
   node index.js config [leads_per_keyword]  # Use keywords from config.js
+  node index.js status                      # Show system status
+  node index.js history                     # Show scraping history statistics
+  node index.js list-history                # List all history files
+  node index.js clear-history [keyword]     # Clear history (all or specific keyword)
 
 Arguments:
   keywords              Comma-separated keywords OR "config" OR "file"
@@ -53,6 +57,9 @@ Examples:
   node index.js "plumber Miami,dentist Los Angeles" 20
   node index.js file 30
   node index.js config 25
+  node index.js history
+  node index.js list-history
+  node index.js clear-history "restaurants New York"
 
 Requirements:
   - GEMINI_API_KEY environment variable for AI functionality
@@ -199,6 +206,74 @@ Output:
 			console.log("   💡 Install Playwright browsers: npx playwright install");
 		}
 	}
+
+	async showHistoryStats() {
+		try {
+			const GoogleScraper = require("./utils/googleScraper");
+			const scraper = new GoogleScraper();
+			const initialized = await scraper.initialize();
+
+			if (initialized) {
+				scraper.showHistoryStats();
+				await scraper.close();
+			} else {
+				console.log("❌ Failed to initialize scraper for history stats");
+			}
+		} catch (error) {
+			console.log(`❌ Error showing history stats: ${error.message}`);
+		}
+	}
+
+	async clearKeywordHistory(keyword) {
+		try {
+			const GoogleScraper = require("./utils/googleScraper");
+			const scraper = new GoogleScraper();
+			const initialized = await scraper.initialize();
+
+			if (initialized) {
+				scraper.clearKeywordHistory(keyword);
+				await scraper.close();
+			} else {
+				console.log("❌ Failed to initialize scraper for history management");
+			}
+		} catch (error) {
+			console.log(`❌ Error clearing keyword history: ${error.message}`);
+		}
+	}
+
+	async clearAllHistory() {
+		try {
+			const GoogleScraper = require("./utils/googleScraper");
+			const scraper = new GoogleScraper();
+			const initialized = await scraper.initialize();
+
+			if (initialized) {
+				scraper.clearAllHistory();
+				await scraper.close();
+			} else {
+				console.log("❌ Failed to initialize scraper for history management");
+			}
+		} catch (error) {
+			console.log(`❌ Error clearing all history: ${error.message}`);
+		}
+	}
+
+	async listHistoryFiles() {
+		try {
+			const GoogleScraper = require("./utils/googleScraper");
+			const scraper = new GoogleScraper();
+			const initialized = await scraper.initialize();
+
+			if (initialized) {
+				scraper.listHistoryFiles();
+				await scraper.close();
+			} else {
+				console.log("❌ Failed to initialize scraper for history listing");
+			}
+		} catch (error) {
+			console.log(`❌ Error listing history files: ${error.message}`);
+		}
+	}
 }
 
 async function main() {
@@ -221,6 +296,26 @@ async function main() {
 
 	if (args[0] === "status") {
 		await app.showSystemStatus();
+		return;
+	}
+
+	if (args[0] === "history") {
+		await app.showHistoryStats();
+		return;
+	}
+
+	if (args[0] === "clear-history") {
+		const keyword = args[1];
+		if (keyword) {
+			await app.clearKeywordHistory(keyword);
+		} else {
+			await app.clearAllHistory();
+		}
+		return;
+	}
+
+	if (args[0] === "list-history") {
+		await app.listHistoryFiles();
 		return;
 	}
 
@@ -247,22 +342,27 @@ async function main() {
 		const maxWaitMinutes = Math.floor((config.CAPTCHA?.MAX_WAIT_TIME || 600) / 60);
 		console.log(`   CAPTCHA wait time: ${maxWaitMinutes} minutes`);
 	}
+	console.log(`   History tracking: ${config.HISTORY?.ENABLED ? 'Enabled' : 'Disabled'}`);
+	if (config.HISTORY?.ENABLED) {
+		const today = new Date().toISOString().split('T')[0];
+		console.log(`   History file: scraping_history_${today}.json`);
+		console.log(`   Max URLs per keyword: ${config.HISTORY?.MAX_URLS_PER_KEYWORD || 1000}`);
+		console.log(`   History retention: ${config.HISTORY?.MAX_AGE_DAYS || 30} days`);
+		console.log(`   Daily reset: Each day creates a new history file`);
+	}
 
 	try {
 		console.log("\n⏳ Starting scraper...");
 		const leads = await app.runScraper(keywords, leadsPerKeyword);
 
 		console.log(`\n🎉 Scraping completed successfully!`);
-		console.log(`📊 Results:`);
-		console.log(`   Total leads found: ${leads.length}`);
-		console.log(`   Leads with name: ${leads.filter((l) => l.name).length}`);
-		console.log(`   Leads with title: ${leads.filter((l) => l.title).length}`);
-		console.log(`   Leads with company: ${leads.filter((l) => l.company).length}`);
-		console.log(`   Leads with email: ${leads.filter((l) => l.email).length}`);
-		console.log(`   Leads with phone: ${leads.filter((l) => l.phone).length}`);
-		console.log(
-			`   Unique companies: ${new Set(leads.map((l) => l.company)).size}`
-		);
+		// console.log(`   Leads with name: ${leads.filter((l) => l.name).length}`);
+		// console.log(`   Leads with title: ${leads.filter((l) => l.title).length}`);
+		// console.log(`   Leads with company: ${leads.filter((l) => l.company).length}`);
+		// console.log(`   Leads with email: ${leads.filter((l) => l.email).length}`);
+		// console.log(`   Leads with phone: ${leads.filter((l) => l.phone).length}`);
+		
+		
 	} catch (error) {
 		console.error("\n❌ Error during scraping:", error.message);
 		console.log("\n💡 Troubleshooting tips:");

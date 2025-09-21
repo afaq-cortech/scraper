@@ -54,6 +54,14 @@ module.exports = {
 		ENABLED: true,
 	},
 
+	HISTORY: {
+		ENABLED: true,
+		MAX_URLS_PER_KEYWORD: 1000, // Maximum URLs to keep in history per keyword
+		MAX_AGE_DAYS: 30, // Maximum age of history entries in days
+		AUTO_CLEANUP: true, // Automatically clean old entries
+		SHOW_STATS: true, // Show history statistics at startup
+	},
+
 	STEALTH: {
 		BLOCK_RESOURCES: ["image", "font", "media", "stylesheet"],
 		BLOCK_DOMAINS: [
