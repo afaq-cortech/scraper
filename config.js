@@ -10,7 +10,7 @@ module.exports = {
 	LLM: {
 		PROVIDER: "gemini",
 		MODEL: "gemini-1.5-flash",
-		API_KEY: process.env.GEMINI_API_KEY || "AIzaSyAOrt-ofWquLImwqSf5ZVZr238545nL8Vg",
+		API_KEY: process.env.GEMINI_API_KEY,
 		ENABLED: process.env.GEMINI_API_KEY ? true : false,
 		MAX_TOKENS: 800,
 		TEMPERATURE: 0.1,

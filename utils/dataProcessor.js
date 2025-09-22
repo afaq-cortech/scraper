@@ -597,8 +597,8 @@ class DataProcessor {
     const uniqueLeads = [];
     const seenEmails = new Set();
     const seenPhones = new Set();
-    const seenWebsites = new Set();
-    const seenCompanies = new Set();
+    // const seenWebsites = new Set();
+    // const seenCompanies = new Set();
 
     leads.forEach((lead) => {
       const email = this.cleanEmail(lead.email);
@@ -609,17 +609,15 @@ class DataProcessor {
       // Check for duplicates by email, phone, website, or company
       if (
         (email && seenEmails.has(email)) ||
-        (phone && seenPhones.has(phone)) ||
-        (website && seenWebsites.has(website)) ||
-        (company && seenCompanies.has(company))
+        (phone && seenPhones.has(phone)) 
       ) {
         return;
       }
 
       if (email) seenEmails.add(email);
       if (phone) seenPhones.add(phone);
-      if (website) seenWebsites.add(website);
-      if (company) seenCompanies.add(company);
+      // if (website) seenWebsites.add(website);
+      // if (company) seenCompanies.add(company);
 
       uniqueLeads.push(lead);
     });

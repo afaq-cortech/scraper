@@ -149,7 +149,7 @@ class LeadScraper {
 			console.log(`📊 Combined export (all keywords): ${exportPath}`);
 		}
 
-			console.log(`\n🎉 Scraping completed! Total leads: ${totalLeads}`);
+			console.log(`\n🎉 Scraping completed!`);
 			return this.leads;
 		} catch (error) {
 			console.error("❌ Scraping failed:", error);

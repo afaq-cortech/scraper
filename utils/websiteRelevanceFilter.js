@@ -3,7 +3,7 @@ require("dotenv").config();
 
 class WebsiteRelevanceFilter {
 	constructor() {
-		this.apiKey = process.env.GEMINI_API_KEY || "AIzaSyAOrt-ofWquLImwqSf5ZVZr238545nL8Vg";
+		this.apiKey = process.env.GEMINI_API_KEY;
 		this.genAI = this.apiKey ? new GoogleGenerativeAI(this.apiKey) : null;
 	}
 
